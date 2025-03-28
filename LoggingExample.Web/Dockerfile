@@ -1,21 +1,18 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
+FROM mcr.microsoft.com/dotnet/aspnet:7.0 AS base
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+EXPOSE 80
+EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
+FROM mcr.microsoft.com/dotnet/sdk:7.0 AS build
 WORKDIR /src
 COPY ["LoggingExample.Web/LoggingExample.Web.csproj", "LoggingExample.Web/"]
 RUN dotnet restore "LoggingExample.Web/LoggingExample.Web.csproj"
 COPY . .
 WORKDIR "/src/LoggingExample.Web"
-RUN dotnet build "LoggingExample.Web.csproj" -c $BUILD_CONFIGURATION -o /app/build
+RUN dotnet build "LoggingExample.Web.csproj" -c Release -o /app/build
 
 FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "LoggingExample.Web.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "LoggingExample.Web.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app

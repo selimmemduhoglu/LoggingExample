@@ -36,7 +36,7 @@ public static class LoggingExtension
                 ModifyConnectionSettings = s => s.BasicAuthentication(model.ElasticUser, model.ElasticPassword), //Authentication
                 EmitEventFailure = EmitEventFailureHandling.WriteToSelfLog, //SelfLog.Enable ile aynı işlev
                 //Sink loglaması hata alırsa console üzerine loglasın
-                FailureCallback = e => { Console.WriteLine("Unable to submit event -- " + e.RenderMessage() + " : " + e.Exception?.Message); }
+                FailureCallback = (logEvent, exception) => { Console.WriteLine($"Unable to submit event -- {logEvent.RenderMessage()} : {exception?.Message}"); }
             })
             .Enrich.FromLogContext() // Tüm loglarda ek field olarak logun kaynak bilgisini ekle (SourceContext)
             .Enrich.WithMachineName() // Tüm loglarda ek field olarak bilgisayarin ismi ekle (MachineName)
