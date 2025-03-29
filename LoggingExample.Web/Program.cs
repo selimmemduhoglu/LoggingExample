@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Serilog konfigürasyonu
 builder.Host.UseSerilog((context, loggerConfig) => loggerConfig
-    .ReadFrom.Configuration(context.Configuration));
+    .ReadFrom.Configuration(context.Configuration)); // appsetting'te ki konfigürasyonu okusun diye var.
 
 // Add services to the container.
 builder.Services.AddControllers();
