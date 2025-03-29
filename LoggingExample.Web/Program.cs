@@ -4,9 +4,9 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Serilog konfigürasyonu
+// Serilog konfigï¿½rasyonu
 builder.Host.UseSerilog((context, loggerConfig) => loggerConfig
-    .ReadFrom.Configuration(context.Configuration)); // appsetting'te ki konfigürasyonu okusun diye var.
+    .ReadFrom.Configuration(context.Configuration)); // appsetting'te ki konfigï¿½rasyonu okusun diye var.
 
 // Add services to the container.
 builder.Services.AddControllers();
