@@ -2,6 +2,7 @@ using Elastic.Apm.NetCoreAll;
 using LoggingExample.Web.Configurations;
 using LoggingExample.Web.Extensions;
 using LoggingExample.Web.Middlewares;
+using Prometheus;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,13 +20,13 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerServices();
 
-builder.Services.AddTransient<RequestResponseLogMiddleware>();
+builder.Services.AddTransient<RequestResponseLogMiddleware>(); // Middleware'i ekleyelim
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseAllElasticApm(builder.Configuration);
+app.UseAllElasticApm(builder.Configuration);    // Elastic APM'i ekleyelim
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -37,7 +38,14 @@ app.UseMiddleware<RequestResponseLogMiddleware>();
 
 app.UseAuthorization();
 
-app.MapControllers();
-app.UseHealthChecks("/api/health-check");
 
-app.Run();
+// Prometheus metrics middleware'ini ekleyelim
+app.UseMetricServer(); // Prometheus metriklerini toplamak i�in
+app.UseHttpMetrics(); // Http metriklerini toplamak i�in
+app.UseMiddleware<MetricsMiddleware>(); // Custom middleware'i ekleyelim
+
+
+app.MapControllers(); // Routing'i ekle
+app.UseHealthChecks("/api/health-check"); // Health check endpoint'i ekle
+
+app.Run(); 
