@@ -9,6 +9,7 @@ using Serilog.Events;
 using Serilog.Exceptions;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
+using LoggingExample.Web.Services.Kafka;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,6 +90,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerServices();
 builder.Services.AddTransient<RequestResponseLogMiddleware>();
 builder.Services.AddSingleton<ILogContextEnricher, LogContextEnricher>();
+// Kafka services
+builder.Services.AddSingleton<KafkaProducerService>();
+builder.Services.AddHostedService<KafkaConsumerService>();
+
 
 // HttpClientFactory ekleme (HealthCheck için)
 builder.Services.AddHttpClient();
