@@ -4,8 +4,11 @@ using LoggingExample.Web.Middlewares;
 using LoggingExample.Web.Services;
 using Prometheus;
 using Serilog;
+using Serilog.Enrichers.Span;
 using Serilog.Events;
 using Serilog.Exceptions;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +24,7 @@ builder.Host.UseSerilog((context, loggerConfig) =>
 		.Enrich.WithEnvironmentName()
 		.Enrich.WithProperty("ApplicationName", "LoggingExample")
 		.Enrich.WithCorrelationId()
+		.Enrich.WithSpan() // OpenTelemetry span bilgilerini ekler
 		// Elastic.Net istemci loglarını filtrele
 		.Filter.ByExcluding(c => c.Properties.ContainsKey("SourceContext") &&
 						   (c.Properties["SourceContext"].ToString().Contains("HttpConnectionDiagnosticsListener") ||
@@ -40,7 +44,44 @@ builder.Host.UseSerilog((context, loggerConfig) =>
 			restrictedToMinimumLevel: LogEventLevel.Information);
 });
 
-
+// Add OpenTelemetry services // For jaeger
+builder.Services.AddOpenTelemetry() // OpenTelemetry izleme hizmetlerini ekliyoruz.
+	.ConfigureResource(resource => resource
+		.AddService("LoggingExample.Web"))  // Bu, izleme kaynaklarını yapılandırıyor ve servis adı olarak "LoggingExample.Web" belirliyoruz.
+	.WithTracing(tracerProviderBuilder =>  // İzleme (tracing) yapılandırmasını başlatıyoruz.
+	{
+		tracerProviderBuilder
+			.AddAspNetCoreInstrumentation(options =>  // ASP.NET Core uygulamasında izleme yapabilmek için gerekli yapılandırmayı ekliyoruz.
+			{
+				options.RecordException = true;  // Eğer bir hata oluşursa, bu hatayı kaydediyoruz.
+				options.EnrichWithHttpRequest = (activity, request) => // HTTP istekleri ile ilgili ekstra bilgiler ekliyoruz.
+				{
+					activity.SetTag("http.request.header.x-correlation-id",
+						request.Headers["X-Correlation-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString());
+					// "X-Correlation-ID" başlığına göre bir "correlation ID" set ediyoruz. Eğer başlık yoksa, yeni bir GUID oluşturuyoruz.
+				};
+			})
+			.AddHttpClientInstrumentation(options => // HTTP istemcisi (HttpClient) için izleme yapılandırması ekliyoruz.
+			{
+				options.RecordException = true; // HTTP isteklerinde hata meydana gelirse kaydediyoruz.
+				options.FilterHttpRequestMessage = (request) => // İstekler için filtreleme işlemi.
+				{
+					//  // Elasticsearch ve Seq gibi altyapı isteklerini filtreliyoruz.
+					if (request.RequestUri?.Host.Contains("elasticsearch") == true ||
+						request.RequestUri?.Host.Contains("seq") == true)
+						return false; // Elasticsearch ve Seq istekleri için izleme yapılmasın.
+					return true; // Didğer tüm istekler için izleme yapılmasını sağlıyor.
+				};
+			})
+			.AddOtlpExporter(options => // OpenTelemetry için OTLP (OpenTelemetry Protocol) exporter ekliyoruz.
+			{
+				options.Endpoint = new Uri( 
+					builder.Environment.IsDevelopment() // Uygulama geliştirme ortamında mı diye kontrol ediyoruz.
+						? "http://localhost:4317" // Geliştirme ortamında Jaeger'e istek gönderiyoruz.
+						: "http://jaeger:4317" // Üretim ortamında ise Jaeger konteynerine bağlanıyoruz.
+				);
+			});
+	});
 
 // Services
 builder.Services.AddControllers();

@@ -25,11 +25,16 @@ namespace LoggingExample.Web.Middlewares
 			var startTime = Stopwatch.GetTimestamp();
 
 			// Korelasyon ID (request izleme için)
-			var correlationId = context.Request.Headers["X-Correlation-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString();
+			String correlationId = context.Request.Headers["X-Correlation-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString();
 			context.Response.Headers["X-Correlation-ID"] = correlationId;
 
+			// Activity için TraceId alımı
+			string traceId = Activity.Current?.TraceId.ToString() ?? "";
+
+
+
 			// Log Context'e değerler ekleyelim
-			using (_logEnricher.EnrichFromRequest(context, correlationId))
+			using (_logEnricher.EnrichFromRequest(context, correlationId, traceId))
 			{
 				// İstek detaylarını logla
 				_logger.LogInformation("HTTP {RequestMethod} {RequestPath} başladı",

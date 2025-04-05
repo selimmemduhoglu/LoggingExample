@@ -5,15 +5,18 @@ namespace LoggingExample.Web.Services
 {
 	public interface ILogContextEnricher
 	{
-		IDisposable EnrichFromRequest(HttpContext context, string correlationId);
+		IDisposable EnrichFromRequest(HttpContext context, string correlationId, string traceId);
 	}
 
 	public class LogContextEnricher : ILogContextEnricher
 	{
-		public IDisposable EnrichFromRequest(HttpContext context, string correlationId)
+		public IDisposable EnrichFromRequest(HttpContext context, string correlationId, string traceId)
 		{
 			var disposables = new List<IDisposable>
 	        {
+				//Jaeger için eklendi.
+				LogContext.PushProperty("TraceId", traceId),
+
                 // Temel bilgiler
                 LogContext.PushProperty("CorrelationId", correlationId),
 	        	LogContext.PushProperty("RequestId", context.TraceIdentifier),
