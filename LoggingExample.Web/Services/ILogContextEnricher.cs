@@ -1,4 +1,5 @@
 ﻿using Serilog.Context;
+using System.Security.Claims;
 
 namespace LoggingExample.Web.Services
 {
@@ -11,22 +12,53 @@ namespace LoggingExample.Web.Services
 	{
 		public IDisposable EnrichFromRequest(HttpContext context, string correlationId)
 		{
-			// Değerleri zincirleme şekilde ekleyip tek bir IDisposable döndürüyoruz
-			var disposable1 = LogContext.PushProperty("CorrelationId", correlationId);
-			var disposable2 = LogContext.PushProperty("RequestId", context.TraceIdentifier);
-			var disposable3 = LogContext.PushProperty("UserAgent", context.Request.Headers["User-Agent"].ToString());
-			var disposable4 = LogContext.PushProperty("RemoteIpAddress", context.Connection.RemoteIpAddress);
+			var disposables = new List<IDisposable>
+	        {
+                // Temel bilgiler
+                LogContext.PushProperty("CorrelationId", correlationId),
+	        	LogContext.PushProperty("RequestId", context.TraceIdentifier),
+	        	LogContext.PushProperty("RequestMethod", context.Request.Method),
+	        	LogContext.PushProperty("RequestPath", context.Request.Path),
+	        	LogContext.PushProperty("RequestProtocol", context.Request.Protocol),
+	        	LogContext.PushProperty("RequestScheme", context.Request.Scheme),
+                
+                // Kullanıcı bilgileri
+                LogContext.PushProperty("UserAgent", context.Request.Headers["User-Agent"].ToString()),
+	        	LogContext.PushProperty("RemoteIpAddress", context.Connection.RemoteIpAddress),
+	        	LogContext.PushProperty("Host", context.Request.Host.ToString()),
+                
+                // İstek detayları
+                LogContext.PushProperty("QueryString", context.Request.QueryString.ToString()),
+	        	LogContext.PushProperty("ContentType", context.Request.ContentType),
+	        	LogContext.PushProperty("ContentLength", context.Request.ContentLength),
+                
+                // ASP.NET Core bilgileri
+                LogContext.PushProperty("ConnectionId", context.Connection.Id),
+	        	LogContext.PushProperty("RouteData", string.Join(", ", context.GetRouteData()?.Values?.Select(v => $"{v.Key}={v.Value}") ?? Array.Empty<string>()))
+	        };
 
-			// Kullanıcı kimlik bilgileri varsa ekle
-			if (context.User?.Identity?.IsAuthenticated == true)
+			// Belirli önemli HTTP header'ları ekle
+			var importantHeaders = new[] { "Referer", "Origin", "X-Forwarded-For", "X-Real-IP", "Accept-Language" };
+			foreach (var header in importantHeaders)
 			{
-				var disposable5 = LogContext.PushProperty("UserId", context.User.FindFirst("sub")?.Value);
-				var disposable6 = LogContext.PushProperty("UserName", context.User.Identity.Name);
-
-				return new CompositeDisposable(disposable1, disposable2, disposable3, disposable4, disposable5, disposable6);
+				if (context.Request.Headers.TryGetValue(header, out var value))
+				{
+					disposables.Add(LogContext.PushProperty($"Header_{header}", value.ToString()));
+				}
 			}
 
-			return new CompositeDisposable(disposable1, disposable2, disposable3, disposable4);
+			// Kullanıcı kimlik doğrulama bilgileri
+			if (context.User?.Identity?.IsAuthenticated == true)
+			{
+				disposables.Add(LogContext.PushProperty("UserId", context.User.FindFirst("sub")?.Value));
+				disposables.Add(LogContext.PushProperty("UserName", context.User.Identity.Name));
+
+				// İsteğe bağlı: Kullanıcının rol ve claim'lerini de logla
+				var roles = context.User.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value);
+				disposables.Add(LogContext.PushProperty("UserRoles", string.Join(", ", roles)));
+			}
+
+			return new CompositeDisposable(disposables.ToArray());
 		}
 	}
 
@@ -37,7 +69,7 @@ namespace LoggingExample.Web.Services
 
 		public CompositeDisposable(params IDisposable[] disposables)
 		{
-			_disposables = disposables;
+			_disposables = disposables.Where(d => d != null).ToArray();
 		}
 
 		public void Dispose()

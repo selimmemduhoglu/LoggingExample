@@ -10,17 +10,21 @@ using Serilog.Exceptions;
 var builder = WebApplication.CreateBuilder(args);
 
 // Serilog konfigürasyonu
+// Serilog konfigürasyonu
 builder.Host.UseSerilog((context, loggerConfig) =>
 {
-	// appsettings.json'dan temel ayarları okuyalım
 	loggerConfig
 		.ReadFrom.Configuration(context.Configuration)
-		.Enrich.WithExceptionDetails() // Hata detaylarını ekler
-		.Enrich.FromLogContext() // Log context bilgilerini ekler
-		.Enrich.WithMachineName() // Makine adını ekler
-		.Enrich.WithEnvironmentName() // Ortam bilgisini ekler
-		.Enrich.WithProperty("ApplicationName", "LoggingExample") // Uygulama adını ekler
-		.Enrich.WithCorrelationId() // Korelasyon ID ekler (request izleme için)
+		.Enrich.WithExceptionDetails()
+		.Enrich.FromLogContext()
+		.Enrich.WithMachineName()
+		.Enrich.WithEnvironmentName()
+		.Enrich.WithProperty("ApplicationName", "LoggingExample")
+		.Enrich.WithCorrelationId()
+		// Elastic.Net istemci loglarını filtrele
+		.Filter.ByExcluding(c => c.Properties.ContainsKey("SourceContext") &&
+						   (c.Properties["SourceContext"].ToString().Contains("HttpConnectionDiagnosticsListener") ||
+							c.Properties["SourceContext"].ToString().Contains("RequestPipelineDiagnosticsListener")))
 		.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
 		.WriteTo.Elasticsearch(new Serilog.Sinks.Elasticsearch.ElasticsearchSinkOptions(new Uri(context.Configuration["SeriLogConfig:ElasticUri"] ?? "http://elasticsearch:9200"))
 		{
@@ -35,6 +39,8 @@ builder.Host.UseSerilog((context, loggerConfig) =>
 		.WriteTo.Seq(context.Configuration["Seq:ServerUrl"] ?? "http://seq:5341",
 			restrictedToMinimumLevel: LogEventLevel.Information);
 });
+
+
 
 // Services
 builder.Services.AddControllers();
