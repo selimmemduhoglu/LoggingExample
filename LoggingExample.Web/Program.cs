@@ -28,11 +28,9 @@ builder.Host.UseSerilog((context, loggerConfig) =>
 			AutoRegisterTemplate = true,
 			AutoRegisterTemplateVersion = Serilog.Sinks.Elasticsearch.AutoRegisterTemplateVersion.ESv7,
 			ModifyConnectionSettings = conn => conn.BasicAuthentication(
-				context.Configuration["SeriLogConfig:ElasticUser"] ?? "elastic123",
+				context.Configuration["SeriLogConfig:ElasticUser"] ?? "elastic",
 				context.Configuration["SeriLogConfig:ElasticPassword"] ?? "elastic1234"
-			),
-			InlineFields = true,
-			MinimumLogEventLevel = LogEventLevel.Information
+			)
 		})
 		.WriteTo.Seq(context.Configuration["Seq:ServerUrl"] ?? "http://seq:5341",
 			restrictedToMinimumLevel: LogEventLevel.Information);
@@ -69,7 +67,9 @@ app.UseHttpMetrics(); // HTTP metrics için
 // Loglama middleware
 app.UseMiddleware<RequestResponseLogMiddleware>();
 
-app.UseHttpsRedirection();
+// HTTPS yönlendirme tamamen kaldırıldı
+// app.UseHttpsRedirection();
+
 app.UseAuthorization();
 
 // Metrics endpoint
