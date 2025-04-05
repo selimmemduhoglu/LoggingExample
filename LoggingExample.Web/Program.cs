@@ -1,6 +1,5 @@
 using Elastic.Apm.NetCoreAll;
 using LoggingExample.Web.Configurations;
-using LoggingExample.Web.Extensions;
 using LoggingExample.Web.Middlewares;
 using Prometheus;
 using Serilog;
@@ -38,11 +37,6 @@ app.UseMiddleware<RequestResponseLogMiddleware>();
 
 app.UseAuthorization();
 
-
-// Prometheus metrics middleware'ini ekleyelim
-app.UseMetricServer(); // Prometheus metriklerini toplamak i�in
-app.UseHttpMetrics(); // Http metriklerini toplamak i�in
-app.UseMiddleware<MetricsMiddleware>(); // Custom middleware'i ekleyelim
 
 
 app.MapControllers(); // Routing'i ekle
