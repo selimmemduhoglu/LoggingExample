@@ -17,10 +17,10 @@ namespace LoggingExample.Web.Helper
         {
             try
             {
-                var response = await _httpClient.GetAsync($"{_elasticsearchUrl}/_cluster/health", cancellationToken);
+                HttpResponseMessage response = await _httpClient.GetAsync($"{_elasticsearchUrl}/_cluster/health", cancellationToken);
                 response.EnsureSuccessStatusCode();
 
-                var content = await response.Content.ReadAsStringAsync(cancellationToken);
+                string content = await response.Content.ReadAsStringAsync(cancellationToken);
                 // "green" veya "yellow" durumunu kabul et
                 if (content.Contains("green") || content.Contains("yellow"))
                 {

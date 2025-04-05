@@ -1,16 +1,19 @@
+version: '3.8'
+
 networks:
-  test-project-network:
+  logging-network:
     driver: bridge
+
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
     networks:
-      - test-project-network
+      - logging-network
     environment:
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=changeme
+      - ELASTIC_PASSWORD=elastic1234
     ports:
       - "9200:9200"
     volumes:
@@ -25,11 +28,11 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:7.16.1
     networks:
-      - test-project-network
+      - logging-network
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=changeme
+      - ELASTICSEARCH_USERNAME=elastic123
+      - ELASTICSEARCH_PASSWORD=elastic1234
     ports:
       - "5601:5601"
     depends_on:
@@ -44,7 +47,7 @@ services:
   apm-server:
     image: docker.elastic.co/apm/apm-server:7.16.0
     networks:
-      - test-project-network
+      - logging-network
     cap_add: ["CHOWN", "DAC_OVERRIDE", "SETGID", "SETUID"]
     cap_drop: ["ALL"]
     ports:
@@ -56,21 +59,37 @@ services:
         -E apm-server.host=:8200
         -E setup.kibana.host=kibana:5601
         -E output.elasticsearch.hosts=["elasticsearch:9200"]
-        -E output.elasticsearch.username=elastic
-        -E output.elasticsearch.password=changeme
+        -E output.elasticsearch.username=elastic123
+        -E output.elasticsearch.password=elastic1234
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8200/ || exit 1" ]
       interval: 60s
       timeout: 5s
       retries: 3
       start_period: 30s
+ 
+  seq:
+    image: datalust/seq:latest
+    networks:
+      - logging-network
+    ports:
+      - "5341:80"
+    environment:
+      - ACCEPT_EULA=Y
+    volumes:
+      - seq-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
   
   loggingexample.web:
     build:
       context: .
       dockerfile: LoggingExample.Web/Dockerfile
     networks:
-      - test-project-network
+      - logging-network
     ports:
       - "5001:8080"
       - "8081:8081"
@@ -78,15 +97,19 @@ services:
       - elasticsearch
       - kibana
       - apm-server
+      - seq
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_HTTPS_PORTS=8081
       - "SeriLogConfig:ElasticUri=http://elasticsearch:9200"
-      - "SeriLogConfig:ElasticUser=elastic"
-      - "SeriLogConfig:ElasticPassword=changeme"
+      - "SeriLogConfig:ElasticUser=elastic123"
+      - "SeriLogConfig:ElasticPassword=elastic1234"
+      - "ElasticCredentials:Username=elastic123"
+      - "ElasticCredentials:Password=elastic1234"
       - "ElasticApm:ServerUrls=http://apm-server:8200"
-      - "ElasticApm:SecretToken=changeme"
+      - "ElasticApm:SecretToken=apmsecrettoken"
+      - "Seq:ServerUrl=http://seq:5341"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
@@ -97,8 +120,6 @@ services:
       retries: 3
       start_period: 30s
 
-
-
-
 volumes:
   elasticsearch-data:
+  seq-data:
