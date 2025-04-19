@@ -1,14 +1,37 @@
+version: '3.8'
+
 services:
   loggingexample.web:
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+      - ASPNETCORE_HTTP_PORTS=${ASPNETCORE_HTTP_PORTS}
+      - ASPNETCORE_HTTPS_PORTS=${ASPNETCORE_HTTPS_PORTS}
+      - ASPNETCORE_URLS=http://+:${ASPNETCORE_HTTP_PORTS}
     ports:
-      - "8080"
-      - "8081"
+      - "${ASPNETCORE_HTTP_PORTS}:${ASPNETCORE_HTTP_PORTS}"
+      - "${ASPNETCORE_HTTPS_PORTS}:${ASPNETCORE_HTTPS_PORTS}"
     volumes:
       - ${APPDATA}/Microsoft/UserSecrets:/home/app/.microsoft/usersecrets:ro
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
       - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  elasticsearch:
+    environment:
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+
+  kibana:
+    environment:
+      - SERVER_NAME=kibana.local
+      - SERVER_HOST=0.0.0.0
+
+  jaeger:
+    environment:
+      - QUERY_BASE_PATH=/jaeger
+      - LOG_LEVEL=debug
+    
+  kafka:
+    environment:
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_NUM_PARTITIONS=3
+      - KAFKA_CFG_LOG_RETENTION_HOURS=24

@@ -12,9 +12,9 @@ services:
       - logging-network
     environment:
       - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ES_JAVA_OPTS=${ES_JAVA_OPTS}
       - xpack.security.enabled=true
-      - ELASTIC_PASSWORD=elastic1234
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     ports:
       - "9200:9200"
     volumes:
@@ -35,8 +35,8 @@ services:
       - logging-network
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=elastic1234
+      - ELASTICSEARCH_USERNAME=${ELASTICSEARCH_USERNAME}
+      - ELASTICSEARCH_PASSWORD=${ELASTIC_PASSWORD}
     ports:
       - "5601:5601"
     depends_on:
@@ -65,8 +65,8 @@ services:
         -E apm-server.host=:8200
         -E setup.kibana.host=kibana:5601
         -E output.elasticsearch.hosts=["elasticsearch:9200"]
-        -E output.elasticsearch.username=elastic
-        -E output.elasticsearch.password=elastic1234
+        -E output.elasticsearch.username=${ELASTICSEARCH_USERNAME}
+        -E output.elasticsearch.password=${ELASTIC_PASSWORD}
     healthcheck:
       test: ["CMD", "curl", "-s", "-f", "http://localhost:8200"]
       interval: 30s
@@ -83,7 +83,7 @@ services:
     ports:
       - "5341:80"
     environment:
-      - ACCEPT_EULA=Y
+      - ACCEPT_EULA=${SEQ_ACCEPT_EULA}
     volumes:
       - seq-data:/data
     healthcheck:
@@ -107,14 +107,11 @@ services:
       - elasticsearch
       - seq
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_URLS=http://+:8080
       - SeriLogConfig__ElasticUri=http://elasticsearch:9200
-      - SeriLogConfig__ElasticUser=elastic
-      - SeriLogConfig__ElasticPassword=elastic1234
+      - SeriLogConfig__ElasticUser=${ELASTICSEARCH_USERNAME}
+      - SeriLogConfig__ElasticPassword=${ELASTIC_PASSWORD}
       - ElasticApm__ServerUrls=http://apm-server:8200
-      - ElasticApm__SecretToken=apmsecrettoken
+      - ElasticApm__SecretToken=${APM_SERVER_SECRET_TOKEN}
       - Seq__ServerUrl=http://seq:5341
     healthcheck:
       test: ["CMD", "curl", "-s", "-f", "http://localhost:8080/api/health-check"]
@@ -137,8 +134,8 @@ services:
       - "16686:16686"
       - "14250:14250"
       - "14268:14268"
-      - "4317:4317" # OTLP gRPC port
-      - "4318:4318" # OTLP HTTP port
+      - "4317:4317"
+      - "4318:4318" 
     environment:
       - COLLECTOR_ZIPKIN_HOST_PORT=9411
     healthcheck:
@@ -160,7 +157,7 @@ services:
     ports:
       - "2181:2181"
     environment:
-      ALLOW_ANONYMOUS_LOGIN: yes
+      ALLOW_ANONYMOUS_LOGIN: ${ALLOW_ANONYMOUS_LOGIN}
       ZOO_LOG_DIR: /var/log/zookeeper
       ZOO_LOG4J_PROP: INFO,ROLLINGFILE
       ZOO_LOG4J_LOG_DIR: /var/log/zookeeper
@@ -181,7 +178,7 @@ services:
     ports:
       - "9092:9092"
     environment:
-      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_NODE_ID=${KAFKA_NODE_ID}
       - KAFKA_CFG_PROCESS_ROLES=broker,controller
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092
@@ -200,7 +197,7 @@ services:
       start_period: 40s
 
 
-  akhd:
+  akhq:
     image: tchiotludo/akhq
     networks:
       - logging-network
@@ -223,11 +220,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-
-    
-    
-
 
 
 volumes:
