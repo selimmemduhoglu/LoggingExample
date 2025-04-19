@@ -39,7 +39,7 @@ namespace LoggingExample.Web.Controllers
         /// Veri 2 dakika boyunca önbellekte saklanır.
         /// </remarks>
         [HttpGet("time")]
-        [Cache(absoluteExpirationMinutes: 2)]
+        [Cache(2)]
         public IActionResult GetTime()
         {
             _logger.LogInformation("GetTime endpoint called");

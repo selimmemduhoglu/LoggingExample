@@ -11,38 +11,38 @@ namespace LoggingExample.Web.Attributes
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class CacheAttribute : ActionFilterAttribute
     {
-        private readonly int? _absoluteExpirationMinutes;
-        private readonly int? _slidingExpirationMinutes;
+        private readonly int _absoluteExpirationMinutes;
+        private readonly int _slidingExpirationMinutes;
         private readonly string[] _varyByQueryParams;
         private readonly string[] _varyByHeaders;
         private readonly bool _varyByUser;
 
-        /// <summary>
-        /// Cache attribute constructor
-        /// </summary>
-        /// <param name="absoluteExpirationMinutes">Mutlak son kullanma süresi (dakika)</param>
-        /// <param name="slidingExpirationMinutes">Kayar son kullanma süresi (dakika)</param>
-        /// <param name="varyByQueryParams">Sorgu parametreleri için değişkenlik</param>
-        /// <param name="varyByHeaders">HTTP başlıkları için değişkenlik</param>
-        /// <param name="varyByUser">Kullanıcıya göre değişkenlik</param>
-        public CacheAttribute(
-            int? absoluteExpirationMinutes = null, 
-            int? slidingExpirationMinutes = null,
-            string[]? varyByQueryParams = null,
-            string[]? varyByHeaders = null,
-            bool varyByUser = false)
-        {
-            _absoluteExpirationMinutes = absoluteExpirationMinutes;
-            _slidingExpirationMinutes = slidingExpirationMinutes;
-            _varyByQueryParams = varyByQueryParams ?? Array.Empty<string>();
-            _varyByHeaders = varyByHeaders ?? Array.Empty<string>();
-            _varyByUser = varyByUser;
-        }
+		/// <summary>
+		/// Cache attribute constructor
+		/// </summary>
+		/// <param name="absoluteExpirationMinutes">Mutlak son kullanma süresi (dakika)</param>
+		/// <param name="slidingExpirationMinutes">Kayar son kullanma süresi (dakika)</param>
+		/// <param name="varyByQueryParams">Sorgu parametreleri için değişkenlik</param>
+		/// <param name="varyByHeaders">HTTP başlıkları için değişkenlik</param>
+		/// <param name="varyByUser">Kullanıcıya göre değişkenlik</param>
+		public CacheAttribute(
+			int absoluteExpirationMinutes = 0,
+			int slidingExpirationMinutes = 0,
+			string[]? varyByQueryParams = null,
+			string[]? varyByHeaders = null,
+			bool varyByUser = false)
+		{
+			_absoluteExpirationMinutes = absoluteExpirationMinutes > 0 ? absoluteExpirationMinutes : 0;
+			_slidingExpirationMinutes = slidingExpirationMinutes > 0 ? slidingExpirationMinutes : 0;
+			_varyByQueryParams = varyByQueryParams ?? Array.Empty<string>();
+			_varyByHeaders = varyByHeaders ?? Array.Empty<string>();
+			_varyByUser = varyByUser;
+		}
 
-        /// <summary>
-        /// Action çalışmadan önce çalışır. Önbellek kontrolü yapar.
-        /// </summary>
-        public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+		/// <summary>
+		/// Action çalışmadan önce çalışır. Önbellek kontrolü yapar.
+		/// </summary>
+		public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             var cacheService = context.HttpContext.RequestServices.GetRequiredService<ICacheService>();
             

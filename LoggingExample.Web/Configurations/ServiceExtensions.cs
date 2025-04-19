@@ -224,9 +224,9 @@ namespace LoggingExample.Web.Configurations
 						sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
 					}));
 
-			// HealthCheck için veritabanı kontrolü ekle
-			services.AddHealthChecks()
-				.AddDbContextCheck<ApplicationDbContext>("database_health_check", tags: new[] { "database", "sql" });
+			//// HealthCheck için veritabanı kontrolü ekle
+			//services.AddHealthChecks()
+			//	.AddDbContextCheck<ApplicationDbContext>("database_health_check", tags: new[] { "database", "sql" });
 
 			return services;
 		}

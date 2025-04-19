@@ -37,11 +37,12 @@ namespace LoggingExample.Web.Data
             try
             {
                 logger.LogInformation("Veritabanı migrasyonları kontrol ediliyor");
-				//dotnet ef migrations add MigrationName
+				// dotnet ef migrations add InitialMigration> --project LoggingExample.Web
+                // command'ını uygula ve sonrasında aşağıda ki Migration ile Uğpdate.Database işlemi yapılıyor.
 				// Veritabanını oluştur ve migrations'ları uygula
-				dbContext.Database.Migrate();
-                
-                logger.LogInformation("Veritabanı başarıyla hazırlandı");
+				dbContext.Database.Migrate(); // Veritabanını oluştur ve migrasyonları uygula
+
+				logger.LogInformation("Veritabanı başarıyla hazırlandı");
             }
             catch (Exception ex)
             {
