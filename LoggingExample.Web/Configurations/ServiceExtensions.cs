@@ -3,7 +3,9 @@ using FluentValidation.AspNetCore;
 using LoggingExample.Web.Filters;
 using LoggingExample.Web.Middleware;
 using LoggingExample.Web.Middlewares;
+using LoggingExample.Web.Models.OptionModels;
 using LoggingExample.Web.Services;
+using LoggingExample.Web.Services.Cache;
 using LoggingExample.Web.Services.Kafka;
 using LoggingExample.Web.Validations;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +16,6 @@ using Serilog.Enrichers.Span;
 using Serilog.Events;
 using Serilog.Exceptions;
 using Serilog.Sinks.Elasticsearch;
-
 namespace LoggingExample.Web.Configurations
 {
 	/// <summary>
@@ -34,7 +35,8 @@ namespace LoggingExample.Web.Configurations
 				.ConfigureSwagger()
 				.ConfigureMiddlewareServices()
 				.ConfigureKafkaServices()
-				.ConfigureHealthChecks(builder.Configuration);
+				.ConfigureHealthChecks(builder.Configuration)
+				.ConfigureRedis(builder.Configuration);
 		}
 
 		/// <summary>
@@ -58,18 +60,18 @@ namespace LoggingExample.Web.Configurations
 									(c.Properties["SourceContext"].ToString().Contains("HttpConnectionDiagnosticsListener") ||
 										c.Properties["SourceContext"].ToString().Contains("RequestPipelineDiagnosticsListener")))
 					.WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
-                    .WriteTo.Elasticsearch(
+					.WriteTo.Elasticsearch(
 						new ElasticsearchSinkOptions(new Uri(context.Configuration["SeriLogConfig:ElasticUri"] ?? "http://elasticsearch:9200"))
-                    	{
+						{
 							IndexFormat = $"{context.Configuration["SeriLogConfig:ProjectName"]}-{context.Configuration["SeriLogConfig:Environment"]}-logs-{{0:yyyy.MM.dd}}",
-                    		AutoRegisterTemplate = true,
+							AutoRegisterTemplate = true,
 							AutoRegisterTemplateVersion = AutoRegisterTemplateVersion.ESv7,
-                    		ModifyConnectionSettings = conn => conn.BasicAuthentication(
-                    			context.Configuration["SeriLogConfig:ElasticUser"] ?? "elastic",
-                    			context.Configuration["SeriLogConfig:ElasticPassword"] ?? "elastic1234"
-                    		),
+							ModifyConnectionSettings = conn => conn.BasicAuthentication(
+								context.Configuration["SeriLogConfig:ElasticUser"] ?? "elastic",
+								context.Configuration["SeriLogConfig:ElasticPassword"] ?? "elastic1234"
+							),
 							MinimumLogEventLevel = LogEventLevel.Information
-                    	})
+						})
 					.WriteTo.Seq(context.Configuration["Seq:ServerUrl"] ?? "http://seq:5341",
 						restrictedToMinimumLevel: LogEventLevel.Information);
 			});
@@ -194,6 +196,32 @@ namespace LoggingExample.Web.Configurations
 			services.AddHealthChecks()
 				.AddCheck<ElasticsearchHealthCheck>("elasticsearch_health_check",
 					tags: new[] { "elasticsearch", "ready" });
+
+			return services;
+		}
+
+		/// <summary>
+		/// Redis önbellek servisini yapılandırır
+		/// </summary>
+		public static IServiceCollection ConfigureRedis(this IServiceCollection services, IConfiguration configuration)
+		{
+			// Redis yapılandırma seçeneklerini bağla
+			var redisOptions = new RedisOptions();
+			configuration.GetSection("Redis").Bind(redisOptions);
+
+			// Redis önbellek servisini ekle
+			services.AddStackExchangeRedisCache(options =>
+			{
+				options.Configuration = redisOptions.ConnectionString;
+				options.InstanceName = redisOptions.InstanceName;
+			});
+
+			// Cache servisi için bağımlılık enjeksiyonu
+			services.AddSingleton<ICacheService, RedisCacheService>();
+
+			// Health check için Redis kontrolü ekle
+			services.AddHealthChecks()
+				.AddRedis(redisOptions.ConnectionString, "redis_health_check", tags: new[] { "redis", "cache" });
 
 			return services;
 		}

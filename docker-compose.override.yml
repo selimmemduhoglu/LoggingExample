@@ -7,6 +7,10 @@ services:
       - ASPNETCORE_HTTP_PORTS=${ASPNETCORE_HTTP_PORTS}
       - ASPNETCORE_HTTPS_PORTS=${ASPNETCORE_HTTPS_PORTS}
       - ASPNETCORE_URLS=http://+:${ASPNETCORE_HTTP_PORTS}
+      - Redis__AbsoluteExpirationMinutes=60
+      - Redis__SlidingExpirationMinutes=20
+      - Redis__ConnectionString=redis:6379,password=${REDIS_PASSWORD}
+      - Redis__InstanceName=LoggingExample:- 
     ports:
       - "${ASPNETCORE_HTTP_PORTS}:${ASPNETCORE_HTTP_PORTS}"
       - "${ASPNETCORE_HTTPS_PORTS}:${ASPNETCORE_HTTPS_PORTS}"
@@ -15,6 +19,11 @@ services:
       - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
       - ${APPDATA}/ASP.NET/Https:/home/app/.aspnet/https:ro
       - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
+
+  redis:
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD} --loglevel verbose
 
   elasticsearch:
     environment:
