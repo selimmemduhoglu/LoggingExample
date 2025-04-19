@@ -19,6 +19,8 @@ using Serilog.Enrichers.Span;
 using Serilog.Events;
 using Serilog.Exceptions;
 using Serilog.Sinks.Elasticsearch;
+using LoggingExample.Web.Data.EntityConfigurations;
+using LoggingExample.Web.Repositories.UnitOfWork;
 namespace LoggingExample.Web.Configurations
 {
 	/// <summary>
@@ -239,6 +241,9 @@ namespace LoggingExample.Web.Configurations
 
 			// Özel repository'ler için DI yapılandırması
 			services.AddScoped<ICachedRequestRepository, CachedRequestRepository>();
+
+			// UnitOfWork için DI yapılandırması
+			services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 			return services;
 		}

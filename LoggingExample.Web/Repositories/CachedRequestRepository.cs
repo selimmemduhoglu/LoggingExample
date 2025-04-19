@@ -4,23 +4,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LoggingExample.Web.Repositories
 {
+    /// <summary>
+    /// CachedRequest repository implementasyonu
+    /// </summary>
     public class CachedRequestRepository : Repository<CachedRequest>, ICachedRequestRepository
     {
-        private readonly ApplicationDbContext _context;
-        private readonly ILogger<CachedRequestRepository> _logger;
-
+        /// <summary>
+        /// Repository constructor
+        /// </summary>
         public CachedRequestRepository(ApplicationDbContext context, ILogger<CachedRequestRepository> logger) 
             : base(context, logger)
         {
-            _context = context;
-            _logger = logger;
         }
+
+        /// <inheritdoc/>
         public async Task<CachedRequest?> GetByCacheKeyAsync(string cacheKey)
         {
             _logger.LogDebug("Getting cached request by cache key: {CacheKey}", cacheKey);
             return await _context.CachedRequests
                 .FirstOrDefaultAsync(c => c.CacheKey == cacheKey);
         }
+
+        /// <inheritdoc/>
         public async Task IncrementHitCountAsync(string cacheKey)
         {
             _logger.LogDebug("Incrementing hit count for cache key: {CacheKey}", cacheKey);
@@ -30,10 +35,11 @@ namespace LoggingExample.Web.Repositories
             {
                 cachedRequest.HitCount++;
                 cachedRequest.LastAccessed = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                // SaveChangesAsync artık UnitOfWork tarafından çağrılacak
             }
         }
 
+        /// <inheritdoc/>
         public async Task<IEnumerable<CachedRequest>> GetByUserIdAsync(int userId)
         {
             _logger.LogDebug("Getting cached requests for user ID: {UserId}", userId);
@@ -43,6 +49,7 @@ namespace LoggingExample.Web.Repositories
                 .ToListAsync();
         }
 
+        /// <inheritdoc/>
         public async Task<int> CleanupExpiredRequestsAsync()
         {
             _logger.LogDebug("Cleaning up expired cached requests");
@@ -54,14 +61,15 @@ namespace LoggingExample.Web.Repositories
             if (expiredRequests.Any())
             {
                 _context.CachedRequests.RemoveRange(expiredRequests);
-                await _context.SaveChangesAsync();
-                _logger.LogInformation("Removed {Count} expired cached requests", expiredRequests.Count);
+                // SaveChangesAsync artık UnitOfWork tarafından çağrılacak
+                _logger.LogInformation("Found {Count} expired cached requests for removal", expiredRequests.Count);
                 return expiredRequests.Count;
             }
             
             return 0;
         }
 
+        /// <inheritdoc/>
         public async Task<IEnumerable<CachedRequest>> GetTopHitRequestsAsync(int limit = 10)
         {
             _logger.LogDebug("Getting top {Limit} hit cached requests", limit);
@@ -71,6 +79,7 @@ namespace LoggingExample.Web.Repositories
                 .ToListAsync();
         }
 
+        /// <inheritdoc/>
         public async Task<IEnumerable<CachedRequest>> GetByCorrelationIdAsync(string correlationId)
         {
             _logger.LogDebug("Getting cached requests for correlation ID: {CorrelationId}", correlationId);

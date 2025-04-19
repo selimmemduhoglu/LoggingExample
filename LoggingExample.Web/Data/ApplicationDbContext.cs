@@ -1,19 +1,36 @@
+using LoggingExample.Web.Data.EntityConfigurations;
 using LoggingExample.Web.Models.Entity;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace LoggingExample.Web.Data
 {
+    /// <summary>
+    /// Uygulama veritabanı bağlantı context'i
+    /// </summary>
     public class ApplicationDbContext : DbContext
     {
+        /// <summary>
+        /// DbContext yapılandırma constructor'ı
+        /// </summary>
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) 
             : base(options)
         {
         }
 
+        /// <summary>
+        /// Kullanıcılar tablosu
+        /// </summary>
         public DbSet<User> Users { get; set; } = null!;
         
+        /// <summary>
+        /// Loglar tablosu
+        /// </summary>
         public DbSet<Log> Logs { get; set; } = null!;
         
+        /// <summary>
+        /// Önbelleğe alınan istekler tablosu
+        /// </summary>
         public DbSet<CachedRequest> CachedRequests { get; set; } = null!;
 
         /// <summary>
@@ -23,46 +40,17 @@ namespace LoggingExample.Web.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Users için indexler
-            modelBuilder.Entity<User>()
-                .HasIndex(u => u.Username)
-                .IsUnique();
-            
-            modelBuilder.Entity<User>()
-                .HasIndex(u => u.Email)
-                .IsUnique();
-            
-            // Logs için indexler
-            modelBuilder.Entity<Log>()
-                .HasIndex(l => l.Timestamp);
-            
-            modelBuilder.Entity<Log>()
-                .HasIndex(l => l.Level);
-            
-            modelBuilder.Entity<Log>()
-                .HasIndex(l => l.CorrelationId);
-            
-            // CachedRequests için indexler
-            modelBuilder.Entity<CachedRequest>()
-                .HasIndex(c => c.CacheKey)
-                .IsUnique();
-            
-            modelBuilder.Entity<CachedRequest>()
-                .HasIndex(c => c.ExpiresAt);
-            
-            // Seed data - Admin kullanıcı
-            modelBuilder.Entity<User>().HasData(
-                new User
-                {
-                    Id = 1,
-                    Username = "admin",
-                    Email = "admin@loggingexample.com",
-                    PasswordHash = "AQAAAAIAAYagAAAAEHlVMRYwP5JWtNnlOOvpEMWtHLbsREKgfS1VpbUw2uEQqIk99gXoXSQ4uR7ERlj32w==", // Password: Admin123!
-                    Role = "Admin",
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                }
-            );
+            // Entity konfigürasyonlarını uygula
+            ApplyEntityConfigurations(modelBuilder);
+        }
+
+        /// <summary>
+        /// Entity konfigürasyonlarını uygular
+        /// </summary>
+        private void ApplyEntityConfigurations(ModelBuilder modelBuilder)
+        {
+            // Tüm entity konfigürasyonlarını bulup uygula
+            modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         }
     }
 } 

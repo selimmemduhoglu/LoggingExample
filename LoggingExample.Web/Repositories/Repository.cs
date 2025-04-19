@@ -4,13 +4,19 @@ using System.Linq.Expressions;
 
 namespace LoggingExample.Web.Repositories
 {
+    /// <summary>
+    /// Generic repository implementasyonu
+    /// </summary>
+    /// <typeparam name="T">Entity tipi</typeparam>
     public class Repository<T> : IRepository<T> where T : class
     {
-        private readonly ApplicationDbContext _context;
-        private readonly DbSet<T> _dbSet;
-        private readonly ILogger _logger;
+        protected readonly ApplicationDbContext _context;
+        protected readonly DbSet<T> _dbSet;
+        protected readonly ILogger _logger;
 
-
+        /// <summary>
+        /// Repository constructor
+        /// </summary>
         public Repository(ApplicationDbContext context, ILogger<Repository<T>> logger)
         {
             _context = context;
@@ -39,20 +45,23 @@ namespace LoggingExample.Web.Repositories
         {
             _logger.LogDebug("Adding new entity of type {EntityType}", typeof(T).Name);
             await _dbSet.AddAsync(entity);
-            await _context.SaveChangesAsync();
+            // SaveChangesAsync artık UnitOfWork tarafından çağrılacak
         }
+
         public async Task UpdateAsync(T entity)
         {
             _logger.LogDebug("Updating entity of type {EntityType}", typeof(T).Name);
             _dbSet.Update(entity);
-            await _context.SaveChangesAsync();
+            // SaveChangesAsync artık UnitOfWork tarafından çağrılacak
+            await Task.CompletedTask; // Async metot olduğu için boş task dönüyoruz
         }
 
         public async Task DeleteAsync(T entity)
         {
             _logger.LogDebug("Deleting entity of type {EntityType}", typeof(T).Name);
             _dbSet.Remove(entity);
-            await _context.SaveChangesAsync();
+            // SaveChangesAsync artık UnitOfWork tarafından çağrılacak
+            await Task.CompletedTask; // Async metot olduğu için boş task dönüyoruz
         }
 
         public async Task DeleteAsync(int id)
@@ -64,6 +73,7 @@ namespace LoggingExample.Web.Repositories
                 await DeleteAsync(entity);
             }
         }
+
         public async Task<bool> ExistsAsync(Expression<Func<T, bool>> filter)
         {
             _logger.LogDebug("Checking if entity of type {EntityType} exists with filter", typeof(T).Name);
