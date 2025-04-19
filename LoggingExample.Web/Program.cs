@@ -1,5 +1,7 @@
 using Elastic.Apm.NetCoreAll;
 using LoggingExample.Web.Configurations;
+using LoggingExample.Web.Filters;
+using LoggingExample.Web.Middleware;
 using LoggingExample.Web.Middlewares;
 using LoggingExample.Web.Services;
 using Prometheus;
@@ -10,6 +12,7 @@ using Serilog.Exceptions;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using LoggingExample.Web.Services.Kafka;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,15 +88,30 @@ builder.Services.AddOpenTelemetry() // OpenTelemetry izleme hizmetlerini ekliyor
 	});
 
 // Services
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => 
+{
+    // Tüm controller'lara ValidateModelAttribute ekle
+    options.Filters.Add<ValidateModelAttribute>();
+});
+
+// API için standart davranışları ayarla
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    // ValidationProblemDetails devre dışı bırak (kendi exception middleware'imizi kullanacağız)
+    options.SuppressModelStateInvalidFilter = true;
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerServices();
+
+// Middleware Services
 builder.Services.AddTransient<RequestResponseLogMiddleware>();
+builder.Services.AddTransient<GlobalExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<ILogContextEnricher, LogContextEnricher>();
+
 // Kafka services
 builder.Services.AddSingleton<KafkaProducerService>();
 builder.Services.AddHostedService<KafkaConsumerService>();
-
 
 // HttpClientFactory ekleme (HealthCheck için)
 builder.Services.AddHttpClient();
@@ -112,6 +130,9 @@ if (app.Environment.IsDevelopment())
 {
 	app.UseSwaggerServices();
 }
+
+// Global exception handler middleware - Request/Response log middleware'den önce ekle
+app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
 
 // Prometheus metrics middleware
 app.UseHttpMetrics(); // HTTP metrics için
