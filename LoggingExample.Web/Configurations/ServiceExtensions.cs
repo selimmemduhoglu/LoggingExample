@@ -1,10 +1,13 @@
 using System;
 using Elastic.Apm.NetCoreAll;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using LoggingExample.Web.Filters;
 using LoggingExample.Web.Middleware;
 using LoggingExample.Web.Middlewares;
 using LoggingExample.Web.Services;
 using LoggingExample.Web.Services.Kafka;
+using LoggingExample.Web.Validations;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -130,16 +133,21 @@ namespace LoggingExample.Web.Configurations
         {
             services.AddControllers(options =>
             {
-                // Tüm controller'lara ValidateModelAttribute ekle
-                options.Filters.Add<ValidateModelAttribute>();
+                // Attribute tabanlı validation yerine FluentValidation kullanılacak
+                // FluentValidation exception filter ekle
+                options.Filters.Add<FluentValidationExceptionFilter>();
             });
 
-            // API için standart davranışları ayarla
+            // API için standart davranışları ayarla - FluentValidation için
             services.Configure<ApiBehaviorOptions>(options =>
             {
                 // ValidationProblemDetails devre dışı bırak (kendi exception middleware'imizi kullanacağız)
                 options.SuppressModelStateInvalidFilter = true;
             });
+
+            // FluentValidation yapılandırması
+            services.AddFluentValidationAutoValidation();
+            services.AddValidatorsFromAssemblyContaining<UserDtoValidator>();
 
             services.AddEndpointsApiExplorer();
 
