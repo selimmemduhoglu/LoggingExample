@@ -1,14 +1,17 @@
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using LoggingExample.Web.Data;
 using LoggingExample.Web.Filters;
 using LoggingExample.Web.Middleware;
 using LoggingExample.Web.Middlewares;
 using LoggingExample.Web.Models.OptionModels;
+using LoggingExample.Web.Repositories;
 using LoggingExample.Web.Services;
 using LoggingExample.Web.Services.Cache;
 using LoggingExample.Web.Services.Kafka;
 using LoggingExample.Web.Validations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -36,7 +39,9 @@ namespace LoggingExample.Web.Configurations
 				.ConfigureMiddlewareServices()
 				.ConfigureKafkaServices()
 				.ConfigureHealthChecks(builder.Configuration)
-				.ConfigureRedis(builder.Configuration);
+				.ConfigureRedis(builder.Configuration)
+				.ConfigureDatabase(builder.Configuration)
+				.ConfigureRepositories();
 		}
 
 		/// <summary>
@@ -201,6 +206,44 @@ namespace LoggingExample.Web.Configurations
 		}
 
 		/// <summary>
+		/// Veritabanı bağlantısını yapılandırır
+		/// </summary>
+		public static IServiceCollection ConfigureDatabase(this IServiceCollection services, IConfiguration configuration)
+		{
+			// Entity Framework'ü SQL Server ile yapılandır
+			services.AddDbContext<ApplicationDbContext>(options =>
+				options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"),
+					sqlOptions =>
+					{
+						sqlOptions.EnableRetryOnFailure(
+							maxRetryCount: 5,
+							maxRetryDelay: TimeSpan.FromSeconds(30),
+							errorNumbersToAdd: null);
+						sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+					}));
+
+			// HealthCheck için veritabanı kontrolü ekle
+			services.AddHealthChecks()
+				.AddDbContextCheck<ApplicationDbContext>("database_health_check", tags: new[] { "database", "sql" });
+
+			return services;
+		}
+
+		/// <summary>
+		/// Repository servislerini yapılandırır
+		/// </summary>
+		public static IServiceCollection ConfigureRepositories(this IServiceCollection services)
+		{
+			// Generic repository için DI yapılandırması
+			services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+
+			// Özel repository'ler için DI yapılandırması
+			services.AddScoped<ICachedRequestRepository, CachedRequestRepository>();
+
+			return services;
+		}
+
+		/// <summary>
 		/// Redis önbellek servisini yapılandırır
 		/// </summary>
 		public static IServiceCollection ConfigureRedis(this IServiceCollection services, IConfiguration configuration)
@@ -218,6 +261,12 @@ namespace LoggingExample.Web.Configurations
 
 			// Cache servisi için bağımlılık enjeksiyonu
 			services.AddSingleton<ICacheService, RedisCacheService>();
+			
+			// HttpContextAccessor (Redis cache için gerekli)
+			services.AddHttpContextAccessor();
+			
+			// Cache temizleme arkaplan servisi
+			services.AddHostedService<CacheCleanupService>();
 
 			// Health check için Redis kontrolü ekle
 			services.AddHealthChecks()
